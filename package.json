@@ -1,0 +1,16 @@
+{
+  "name": "compare",
+  "version": "1.0.0",
+  "description": "Compare values",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "author": "Ryel Oliver",
+  "license": "ISC",
+  "devDependencies": {
+    "eslint": "^5.16.0",
+    "jest": "^24.7.1"
+  }
+}
