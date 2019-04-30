@@ -49,7 +49,88 @@ const characters = {
             if (!newValue)
                 return [{ status: removed, value: oldValue }];
 
-            return [{ status: unmodified, value: oldValue }];
+            if (newValue === oldValue)
+                return [{ status: unmodified, value: newValue }];
+        
+            let compared = [];
+            const oldValueLength = oldValue.length;
+            const newValueLength = newValue.length;
+        
+            // If newValue is longer, something was added
+            if (newValueLength >= oldValueLength) {
+                const unmodifiedValue = characters.longestUnmodified.of(newValue).with(oldValue);
+        
+                if (!unmodifiedValue) {
+                    compared.push({ status: removed, value: oldValue });
+                    compared.push({ status: added, value: newValue });
+                } else {
+                    const unmodifiedValueLength = unmodifiedValue.length;
+                    const oldUnmodifiedValueStart = oldValue.indexOf(unmodifiedValue);
+                    const newUnmodifiedValueStart = newValue.indexOf(unmodifiedValue);
+                    const beforeNewUnmodifiedValue = newValue.substring(0, newUnmodifiedValueStart);
+                    const afterNewUnmodifiedValue = newValue.substring(newUnmodifiedValueStart + unmodifiedValueLength);
+            
+                    // If this is all of the oldValue, before and after of the newValue is all added
+                    if (oldUnmodifiedValueStart === 0 && unmodifiedValueLength === oldValueLength) {
+                        if (beforeNewUnmodifiedValue)
+                            compared.push({ status: added, value: beforeNewUnmodifiedValue });
+                
+                        if (unmodifiedValue)
+                            compared.push({ status: unmodified, value: unmodifiedValue });
+                        
+                        if (afterNewUnmodifiedValue)
+                            compared.push({ status: added, value: afterNewUnmodifiedValue });
+                    } else {
+                        const beforeOldUnmodifiedValue = oldValue.substring(0, oldUnmodifiedValueStart);
+                        const afterOldUnmodifiedValue = oldValue.substring(oldUnmodifiedValueStart + unmodifiedValueLength);
+            
+                        compared = compared.concat(characters.of(beforeOldUnmodifiedValue).with(beforeNewUnmodifiedValue));
+            
+                        if (unmodifiedValue)
+                            compared.push({ status: unmodified, value: unmodifiedValue });
+                        
+                        compared = compared.concat(characters.of(afterOldUnmodifiedValue).with(afterNewUnmodifiedValue));
+                    }
+                }
+            // If oldValue is longer, something was removed
+            } else {
+                const unmodifiedValue = characters.longestUnmodified.of(oldValue).with(newValue);
+        
+                if (!unmodifiedValue) {
+                    compared.push({ status: removed, value: oldValue });
+                    compared.push({ status: added, value: newValue });
+                } else {
+                    const unmodifiedValueLength = unmodifiedValue.length;
+                    const newUnmodifiedValueStart = newValue.indexOf(unmodifiedValue);
+                    const oldUnmodifiedValueStart = oldValue.indexOf(unmodifiedValue);
+                    const beforeOldUnmodifiedValue = oldValue.substring(0, oldUnmodifiedValueStart);
+                    const afterOldUnmodifiedValue = oldValue.substring(oldUnmodifiedValueStart + unmodifiedValueLength);
+                
+                    // If this is all of the newValue, before and after of the oldValue is all removed
+                    if (newUnmodifiedValueStart === 0 && unmodifiedValueLength === newValueLength) {
+                        if (beforeOldUnmodifiedValue)
+                            compared.push({ status: removed, value: beforeOldUnmodifiedValue });
+        
+                        if (unmodifiedValue)
+                            compared.push({ status: unmodified, value: unmodifiedValue });
+                    
+                        if (afterOldUnmodifiedValue)
+                            compared.push({ status: removed, value: afterOldUnmodifiedValue });
+                    } else {
+                        const beforeNewUnmodifiedValue = newValue.substring(0, newUnmodifiedValueStart);
+                        const afterNewUnmodifiedValue = newValue.substring(newUnmodifiedValueStart + unmodifiedValueLength);
+        
+                        compared = compared.concat(characters.of(beforeOldUnmodifiedValue).with(beforeNewUnmodifiedValue));
+        
+                        if (unmodifiedValue)
+                            compared.push({ status: unmodified, value: unmodifiedValue });
+                    
+                        compared = compared.concat(characters.of(afterOldUnmodifiedValue).with(afterNewUnmodifiedValue));
+                    }
+                }
+            }
+        
+            return compared;
         },
     }),
 };

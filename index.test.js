@@ -52,34 +52,122 @@ describe('Compare characters', () => {
     });
 
     test('Two strings that are the same', () => {
-        const actual = compare.characters.of('Lorem ipsum').with('Lorem ipsum');
+        const actual = compare.characters
+            .of('Lorem ipsum').with('Lorem ipsum');
         const expected = [{ status: compare.status.unmodified, value: 'Lorem ipsum' }];
         expect(actual).toStrictEqual(expected);
     });
 
     test('Two strings that are both empty', () => {
-        const actual = compare.characters.of('').with('');
+        const actual = compare.characters
+            .of('').with('');
         const expected = [{ status: compare.status.unmodified, value: '' }];
         expect(actual).toStrictEqual(expected);
     });
 
-    test('Two strings where the first is empty', () => {
-        const actual = compare.characters.of('').with('Lorem ipsum');
-        const expected = [{ status: compare.status.added, value: 'Lorem ipsum' }];
-        expect(actual).toStrictEqual(expected);
+    describe('With two strings where the last has additions', () => {
+        test('To the whole string', () => {
+            const actual = compare.characters
+                .of('').with('Lorem ipsum');
+            const expected = [{ status: compare.status.added, value: 'Lorem ipsum' }];
+            expect(actual).toStrictEqual(expected);
+        });
+
+        test('At the start of the string', () => {
+            const actual = compare.characters
+                .of('ipsum').with('Lorem ipsum');
+            const expected = [
+                { status: compare.status.added, value: 'Lorem ' },
+                { status: compare.status.unmodified, value: 'ipsum' },
+            ];
+            expect(actual).toStrictEqual(expected);
+        });
+
+        test('At the end of the string', () => {
+            const actual = compare.characters
+                .of('Lorem').with('Lorem ipsum');
+            const expected = [
+                { status: compare.status.unmodified, value: 'Lorem' },
+                { status: compare.status.added, value: ' ipsum' },
+            ];
+            expect(actual).toStrictEqual(expected);
+        });
+
+        test('At the start and end of the string', () => {
+            const actual = compare.characters
+                .of('ipsum').with('Lorem ipsum dolor');
+            const expected = [
+                { status: compare.status.added, value: 'Lorem ' },
+                { status: compare.status.unmodified, value: 'ipsum' },
+                { status: compare.status.added, value: ' dolor' },
+            ];
+            expect(actual).toStrictEqual(expected);
+        });
+
+        test('In multiple parts of the string', () => {
+            const actual = compare.characters
+                .of('ipsum sit').with('Lorem ipsum dolor sit amet');
+            const expected = [
+                { status: compare.status.added, value: 'Lorem ' },
+                { status: compare.status.unmodified, value: 'ipsum ' },
+                { status: compare.status.added, value: 'dolor ' },
+                { status: compare.status.unmodified, value: 'sit' },
+                { status: compare.status.added, value: ' amet' },
+            ];
+            expect(actual).toStrictEqual(expected);
+        });
     });
 
-    test('Two strings where the last is empty', () => {
-        const actual = compare.characters.of('Lorem ipsum').with('');
-        const expected = [{ status: compare.status.removed, value: 'Lorem ipsum' }];
-        expect(actual).toStrictEqual(expected);
-    });
+    describe('With two strings where the last has removals', () => {
+        test('To the whole string', () => {
+            const actual = compare.characters
+                .of('Lorem ipsum').with('');
+            const expected = [{ status: compare.status.removed, value: 'Lorem ipsum' }];
+            expect(actual).toStrictEqual(expected);
+        });
 
-    test('Two strings where the last is empty', () => {
-        
-        const actual = compare.characters.of('Lorem ipsum').with('');
-        const expected = [{ status: compare.status.removed, value: 'Lorem ipsum' }];
-        expect(actual).toStrictEqual(expected);
-       
+        test('At the start of the string', () => {
+            const actual = compare.characters
+                .of('Lorem ipsum').with('ipsum');
+            const expected = [
+                { status: compare.status.removed, value: 'Lorem ' },
+                { status: compare.status.unmodified, value: 'ipsum' },
+            ];
+            expect(actual).toStrictEqual(expected);
+        });
+
+        test('At the end of the string', () => {
+            const actual = compare.characters
+                .of('Lorem ipsum').with('Lorem');
+            const expected = [
+                { status: compare.status.unmodified, value: 'Lorem' },
+                { status: compare.status.removed, value: ' ipsum' },
+            ];
+            expect(actual).toStrictEqual(expected);
+        });
+
+        test('At the start and end of the string', () => {
+            const actual = compare.characters
+                .of('Lorem ipsum dolor').with('ipsum');
+            const expected = [
+                { status: compare.status.removed, value: 'Lorem ' },
+                { status: compare.status.unmodified, value: 'ipsum' },
+                { status: compare.status.removed, value: ' dolor' },
+            ];
+            expect(actual).toStrictEqual(expected);
+        });
+
+        test('In multiple parts of the string', () => {
+            const actual = compare.characters
+                .of('Lorem ipsum dolor sit amet').with('ipsum sit');
+            const expected = [
+                { status: compare.status.removed, value: 'Lorem ' },
+                { status: compare.status.unmodified, value: 'ipsum ' },
+                { status: compare.status.removed, value: 'dolor ' },
+                { status: compare.status.unmodified, value: 'sit' },
+                { status: compare.status.removed, value: ' amet' },
+            ];
+            expect(actual).toStrictEqual(expected);
+        });
     });
 });
