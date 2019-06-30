@@ -1,38 +1,34 @@
-const compare = require('./index');
+const Difference = require('./index');
+const { By, Type } = Difference;
 
-describe('Compare characters', () => {
+describe('Difference by characters', () => {
     describe('Longest unmodified', () => {
         test('No text that is the same', () => {
-            const actual = compare.characters.longestUnmodified
-                .of('Lorem ipsum').with('x');
+            const actual = Difference.longestUnmodified({ by: By.character, between: 'Lorem ipsum', and: 'x' });
             const expected = '';
             expect(actual).toEqual(expected);
         });
 
         test('The first part of the text is the same', () => {
-            const actual = compare.characters.longestUnmodified
-                .of('Lorem ipsum').with('Lorexxx');
+            const actual = Difference.longestUnmodified({ by: By.character, between: 'Lorem ipsum', and: 'Lorexxx' });
             const expected = 'Lore';
             expect(actual).toEqual(expected);
         });
 
         test('The last part of the text is the same', () => {
-            const actual = compare.characters.longestUnmodified
-                .of('Lorem ipsum').with('xxxpsum');
+            const actual = Difference.longestUnmodified({ by: By.character, between: 'Lorem ipsum', and: 'xxxpsum' });
             const expected = 'psum';
             expect(actual).toEqual(expected);
         });
 
         test('The middle part of the text is the same', () => {
-            const actual = compare.characters.longestUnmodified
-                .of('Lorem ipsum').with('xxxrem ipsum');
+            const actual = Difference.longestUnmodified({ by: By.character, between: 'Lorem ipsum', and: 'xxxrem ipsum' });
             const expected = 'rem ipsum';
             expect(actual).toEqual(expected);
         });
 
         test('Multiple middle parts of the text', () => {
-            const actual = compare.characters.longestUnmodified
-                .of('Lorem ipsum dolor sit').with('Lorex ipxum doxor xit');
+            const actual = Difference.longestUnmodified({ by: By.character, between: 'Lorem ipsum dolor sit', and: 'Lorex ipxum doxor xit' });
             const expected = 'um do';
             expect(actual).toEqual(expected);
         });
@@ -40,170 +36,153 @@ describe('Compare characters', () => {
 
     describe('Errors for values that aren\'t strings', () => {
         test('Booleans', () => {
-            expect(() => compare.characters.of(true).with(true)).toThrow();
+            expect(() => Difference.get({ by: By.character, between: true, and: true })).toThrow();
         });
         test('Numbers', () => {
-            expect(() => compare.characters.of(1).with(1)).toThrow();
+            expect(() => Difference.get({ by: By.character, between: 1, and: 1 })).toThrow();
         });
         test('Objects', () => {
-            expect(() => compare.characters.of({ key: 1 }).with({ key: 1 })).toThrow();
+            expect(() => Difference.get({ by: By.character, between: { key: 1 }, and: { key: 1 } })).toThrow();
         });
     });
 
     test('Two strings that are the same', () => {
-        const actual = compare.characters
-            .of('Lorem ipsum').with('Lorem ipsum');
-        const expected = [{ status: compare.status.unmodified, value: 'Lorem ipsum' }];
+        const actual = Difference.get({ by: By.character, between: 'Lorem ipsum', and: 'Lorem ipsum' });
+        const expected = [{ type: Type.unmodified, text: 'Lorem ipsum' }];
         expect(actual).toStrictEqual(expected);
     });
 
     test('Two strings that are both empty', () => {
-        const actual = compare.characters
-            .of('').with('');
-        const expected = [{ status: compare.status.unmodified, value: '' }];
+        const actual = Difference.get({ by: By.character, between: '', and: '' });
+        const expected = [{ type: Type.unmodified, text: '' }];
         expect(actual).toStrictEqual(expected);
     });
 
-    describe('With two strings where the last has additions', () => {
+    describe('With two strings where the last has inserts', () => {
         test('To the whole string', () => {
-            const actual = compare.characters
-                .of('').with('Lorem ipsum');
-            const expected = [{ status: compare.status.added, value: 'Lorem ipsum' }];
+            const actual = Difference.get({ by: By.character, between: '', and: 'Lorem ipsum' });
+            const expected = [{ type: Type.insert, text: 'Lorem ipsum' }];
             expect(actual).toStrictEqual(expected);
         });
 
         test('At the start of the string', () => {
-            const actual = compare.characters
-                .of('ipsum').with('Lorem ipsum');
+            const actual = Difference.get({ by: By.character, between: 'ipsum', and: 'Lorem ipsum' });
             const expected = [
-                { status: compare.status.added, value: 'Lorem ' },
-                { status: compare.status.unmodified, value: 'ipsum' },
+                { type: Type.insert, text: 'Lorem ' },
+                { type: Type.unmodified, text: 'ipsum' },
             ];
             expect(actual).toStrictEqual(expected);
         });
 
         test('At the end of the string', () => {
-            const actual = compare.characters
-                .of('Lorem').with('Lorem ipsum');
+            const actual = Difference.get({ by: By.character, between: 'Lorem', and: 'Lorem ipsum' });
             const expected = [
-                { status: compare.status.unmodified, value: 'Lorem' },
-                { status: compare.status.added, value: ' ipsum' },
+                { type: Type.unmodified, text: 'Lorem' },
+                { type: Type.insert, text: ' ipsum' },
             ];
             expect(actual).toStrictEqual(expected);
         });
 
         test('At the start and end of the string', () => {
-            const actual = compare.characters
-                .of('ipsum').with('Lorem ipsum dolor');
+            const actual = Difference.get({ by: By.character, between: 'ipsum', and: 'Lorem ipsum dolor' });
             const expected = [
-                { status: compare.status.added, value: 'Lorem ' },
-                { status: compare.status.unmodified, value: 'ipsum' },
-                { status: compare.status.added, value: ' dolor' },
+                { type: Type.insert, text: 'Lorem ' },
+                { type: Type.unmodified, text: 'ipsum' },
+                { type: Type.insert, text: ' dolor' },
             ];
             expect(actual).toStrictEqual(expected);
         });
 
         test('In multiple parts of the string', () => {
-            const actual = compare.characters
-                .of('ipsum sit').with('Lorem ipsum dolor sit amet');
+            const actual = Difference.get({ by: By.character, between: 'ipsum sit', and: 'Lorem ipsum dolor sit amet' });
             const expected = [
-                { status: compare.status.added, value: 'Lorem ' },
-                { status: compare.status.unmodified, value: 'ipsum ' },
-                { status: compare.status.added, value: 'dolor ' },
-                { status: compare.status.unmodified, value: 'sit' },
-                { status: compare.status.added, value: ' amet' },
+                { type: Type.insert, text: 'Lorem ' },
+                { type: Type.unmodified, text: 'ipsum ' },
+                { type: Type.insert, text: 'dolor ' },
+                { type: Type.unmodified, text: 'sit' },
+                { type: Type.insert, text: ' amet' },
             ];
             expect(actual).toStrictEqual(expected);
         });
     });
 
-    describe('With two strings where the last has removals', () => {
+    describe('With two strings where the last has deletes', () => {
         test('To the whole string', () => {
-            const actual = compare.characters
-                .of('Lorem ipsum').with('');
-            const expected = [{ status: compare.status.removed, value: 'Lorem ipsum' }];
+            const actual = Difference.get({ by: By.character, between: 'Lorem ipsum', and: '' });
+            const expected = [{ type: Type.delete, text: 'Lorem ipsum' }];
             expect(actual).toStrictEqual(expected);
         });
 
         test('At the start of the string', () => {
-            const actual = compare.characters
-                .of('Lorem ipsum').with('ipsum');
+            const actual = Difference.get({ by: By.character, between: 'Lorem ipsum', and: 'ipsum' });
             const expected = [
-                { status: compare.status.removed, value: 'Lorem ' },
-                { status: compare.status.unmodified, value: 'ipsum' },
+                { type: Type.delete, text: 'Lorem ' },
+                { type: Type.unmodified, text: 'ipsum' },
             ];
             expect(actual).toStrictEqual(expected);
         });
 
         test('At the end of the string', () => {
-            const actual = compare.characters
-                .of('Lorem ipsum').with('Lorem');
+            const actual = Difference.get({ by: By.character, between: 'Lorem ipsum', and: 'Lorem' });
             const expected = [
-                { status: compare.status.unmodified, value: 'Lorem' },
-                { status: compare.status.removed, value: ' ipsum' },
+                { type: Type.unmodified, text: 'Lorem' },
+                { type: Type.delete, text: ' ipsum' },
             ];
             expect(actual).toStrictEqual(expected);
         });
 
         test('At the start and end of the string', () => {
-            const actual = compare.characters
-                .of('Lorem ipsum dolor').with('ipsum');
+            const actual = Difference.get({ by: By.character, between: 'Lorem ipsum dolor', and: 'ipsum' });
             const expected = [
-                { status: compare.status.removed, value: 'Lorem ' },
-                { status: compare.status.unmodified, value: 'ipsum' },
-                { status: compare.status.removed, value: ' dolor' },
+                { type: Type.delete, text: 'Lorem ' },
+                { type: Type.unmodified, text: 'ipsum' },
+                { type: Type.delete, text: ' dolor' },
             ];
             expect(actual).toStrictEqual(expected);
         });
 
         test('In multiple parts of the string', () => {
-            const actual = compare.characters
-                .of('Lorem ipsum dolor sit amet').with('ipsum sit');
+            const actual = Difference.get({ by: By.character, between: 'Lorem ipsum dolor sit amet', and: 'ipsum sit' });
             const expected = [
-                { status: compare.status.removed, value: 'Lorem ' },
-                { status: compare.status.unmodified, value: 'ipsum ' },
-                { status: compare.status.removed, value: 'dolor ' },
-                { status: compare.status.unmodified, value: 'sit' },
-                { status: compare.status.removed, value: ' amet' },
+                { type: Type.delete, text: 'Lorem ' },
+                { type: Type.unmodified, text: 'ipsum ' },
+                { type: Type.delete, text: 'dolor ' },
+                { type: Type.unmodified, text: 'sit' },
+                { type: Type.delete, text: ' amet' },
             ];
             expect(actual).toStrictEqual(expected);
         });
     });
 });
 
-describe('Compare words', () => {
+describe('Difference by words', () => {
     describe('Longest unmodified', () => {
         test('No words that are the same', () => {
-            const actual = compare.words.longestUnmodified
-                .of('Lorem ipsum').with('x');
+            const actual = Difference.longestUnmodified({ by: By.word, between: 'Lorem ipsum', and: 'x' });
             const expected = '';
             expect(actual).toEqual(expected);
         });
 
         test('The first word is the same', () => {
-            const actual = compare.words.longestUnmodified
-                .of('Lorem ipsum').with('Lorem xxx');
+            const actual = Difference.longestUnmodified({ by: By.word, between: 'Lorem ipsum', and: 'Lorem xxx' });
             const expected = 'Lorem ';
             expect(actual).toEqual(expected);
         });
 
         test('The last word is the same', () => {
-            const actual = compare.words.longestUnmodified
-                .of('Lorem ipsum').with('xxx ipsum');
+            const actual = Difference.longestUnmodified({ by: By.word, between: 'Lorem ipsum', and: 'xxx ipsum' });
             const expected = ' ipsum';
             expect(actual).toEqual(expected);
         });
 
         test('A word in the middle is the same', () => {
-            const actual = compare.words.longestUnmodified
-                .of('Lorem ipsum dolor').with('xxx ipsum xxx');
+            const actual = Difference.longestUnmodified({ by: By.word, between: 'Lorem ipsum dolor', and: 'xxx ipsum xxx' });
             const expected = ' ipsum ';
             expect(actual).toEqual(expected);
         });
 
         test('Multiple words in the middle are the same', () => {
-            const actual = compare.words.longestUnmodified
-                .of('Lorem ipsum dolor sit amet').with('ipsum sit');
+            const actual = Difference.longestUnmodified({ by: By.word, between: 'Lorem ipsum dolor sit amet', and: 'ipsum sit' });
             const expected = 'ipsum ';
             expect(actual).toEqual(expected);
         });
@@ -211,152 +190,153 @@ describe('Compare words', () => {
 
     describe('Errors for values that aren\'t strings', () => {
         test('Booleans', () => {
-            expect(() => compare.words.of(true).with(true)).toThrow();
+            expect(() => Difference.get({ by: By.word, between: true, and: true })).toThrow();
         });
         test('Numbers', () => {
-            expect(() => compare.words.of(1).with(1)).toThrow();
+            expect(() => Difference.get({ by: By.word, between: 1, and: 1 })).toThrow();
         });
         test('Objects', () => {
-            expect(() => compare.words.of({ key: 1 }).with({ key: 1 })).toThrow();
+            expect(() => Difference.get({ by: By.word, between: { key: 1 }, and: { key: 1 } })).toThrow();
         });
     });
 
     test('Two strings that are the same', () => {
-        const actual = compare.words
-            .of('Lorem ipsum').with('Lorem ipsum');
-        const expected = [{ status: compare.status.unmodified, value: 'Lorem ipsum' }];
+        const actual = Difference.get({ by: By.word, between: 'Lorem ipsum', and: 'Lorem ipsum' });
+        const expected = [{ type: Type.unmodified, text: 'Lorem ipsum' }];
         expect(actual).toStrictEqual(expected);
     });
 
     test('Two strings that are both empty', () => {
-        const actual = compare.words
-            .of('').with('');
-        const expected = [{ status: compare.status.unmodified, value: '' }];
+        const actual = Difference.get({ by: By.word, between: '', and: '' });
+        const expected = [{ type: Type.unmodified, text: '' }];
         expect(actual).toStrictEqual(expected);
     });
 
-    describe('With two strings where the last has additions', () => {
+    describe('With two strings where the last has inserts', () => {
         test('To the whole string', () => {
-            const actual = compare.words
-                .of('').with('Lorem ipsum');
+            const actual = Difference.get({ by: By.word, between: '', and: 'Lorem ipsum' });
             const expected = [
-                { status: compare.status.added, value: 'Lorem ipsum' },
+                { type: Type.insert, text: 'Lorem ipsum' },
             ];
             expect(actual).toStrictEqual(expected);
         });
 
         test('At the start of the string', () => {
-            const actual = compare.words
-                .of('ipsum').with('Lorem ipsum');
+            const actual = Difference.get({ by: By.word, between: 'ipsum', and: 'Lorem ipsum' });
             const expected = [
-                { status: compare.status.added, value: 'Lorem ' },
-                { status: compare.status.unmodified, value: 'ipsum' },
+                { type: Type.insert, text: 'Lorem ' },
+                { type: Type.unmodified, text: 'ipsum' },
             ];
             expect(actual).toStrictEqual(expected);
         });
 
         test('At the end of the string', () => {
-            const actual = compare.words
-                .of('Lorem').with('Lorem ipsum');
+            const actual = Difference.get({ by: By.word, between: 'Lorem', and: 'Lorem ipsum' });
             const expected = [
-                { status: compare.status.unmodified, value: 'Lorem' },
-                { status: compare.status.added, value: ' ipsum' },
+                { type: Type.unmodified, text: 'Lorem' },
+                { type: Type.insert, text: ' ipsum' },
             ];
             expect(actual).toStrictEqual(expected);
         });
 
         test('In multiple parts of the string', () => {
-            const actual = compare.words
-                .of('Lorem dolor amet').with('Lorem ipsum dolor sit amet');
+            const actual = Difference.get({ by: By.word, between: 'Lorem dolor amet', and: 'Lorem ipsum dolor sit amet' });
             const expected = [
-                { status: compare.status.unmodified, value: 'Lorem' },
-                { status: compare.status.added, value: ' ipsum' },
-                { status: compare.status.unmodified, value: ' dolor ' },
-                { status: compare.status.added, value: 'sit ' },
-                { status: compare.status.unmodified, value: 'amet' },
+                { type: Type.unmodified, text: 'Lorem' },
+                { type: Type.insert, text: ' ipsum' },
+                { type: Type.unmodified, text: ' dolor ' },
+                { type: Type.insert, text: 'sit ' },
+                { type: Type.unmodified, text: 'amet' },
             ];
             expect(actual).toStrictEqual(expected);
         });
 
         test('Of white space', () => {
-            const actual = compare.words
-                .of('Lorem ipsum dolor sit amet').with('Lorem ipsum  dolor  sit amet ');
+            const actual = Difference.get({ by: By.word, between: 'Lorem ipsum dolor sit amet', and: 'Lorem ipsum  dolor  sit amet ' });
             const expected = [
-                { status: compare.status.unmodified, value: 'Lorem ipsum ' },
-                { status: compare.status.added, value: ' ' },
-                { status: compare.status.unmodified, value: 'dolor' },
-                { status: compare.status.added, value: ' ' },
-                { status: compare.status.unmodified, value: ' sit amet' },
-                { status: compare.status.added, value: ' ' },
+                { type: Type.unmodified, text: 'Lorem ipsum ' },
+                { type: Type.insert, text: ' ' },
+                { type: Type.unmodified, text: 'dolor' },
+                { type: Type.insert, text: ' ' },
+                { type: Type.unmodified, text: ' sit amet' },
+                { type: Type.insert, text: ' ' },
             ];
             expect(actual).toStrictEqual(expected);
         });
     });
 
-    describe('With two strings where the last has removals', () => {
+    describe('With two strings where the last has deletes', () => {
         test('To the whole string', () => {
-            const actual = compare.words
-                .of('Lorem ipsum').with('');
-            const expected = [{ status: compare.status.removed, value: 'Lorem ipsum' }];
+            const actual = Difference.get({ by: By.word, between: 'Lorem ipsum', and: '' });
+            const expected = [{ type: Type.delete, text: 'Lorem ipsum' }];
             expect(actual).toStrictEqual(expected);
         });
 
         test('At the start of the string', () => {
-            const actual = compare.words
-                .of('Lorem ipsum').with('ipsum');
+            const actual = Difference.get({ by: By.word, between: 'Lorem ipsum', and: 'ipsum' });
             const expected = [
-                { status: compare.status.removed, value: 'Lorem ' },
-                { status: compare.status.unmodified, value: 'ipsum' },
+                { type: Type.delete, text: 'Lorem ' },
+                { type: Type.unmodified, text: 'ipsum' },
             ];
             expect(actual).toStrictEqual(expected);
         });
 
         test('At the end of the string', () => {
-            const actual = compare.words
-                .of('Lorem ipsum').with('Lorem');
+            const actual = Difference.get({ by: By.word, between: 'Lorem ipsum', and: 'Lorem' });
             const expected = [
-                { status: compare.status.unmodified, value: 'Lorem' },
-                { status: compare.status.removed, value: ' ipsum' },
+                { type: Type.unmodified, text: 'Lorem' },
+                { type: Type.delete, text: ' ipsum' },
             ];
             expect(actual).toStrictEqual(expected);
         });
 
         test('At the start and end of the string', () => {
-            const actual = compare.words
-                .of('Lorem ipsum dolor').with('ipsum');
+            const actual = Difference.get({ by: By.word, between: 'Lorem ipsum dolor', and: 'ipsum' });
             const expected = [
-                { status: compare.status.removed, value: 'Lorem ' },
-                { status: compare.status.unmodified, value: 'ipsum' },
-                { status: compare.status.removed, value: ' dolor' },
+                { type: Type.delete, text: 'Lorem ' },
+                { type: Type.unmodified, text: 'ipsum' },
+                { type: Type.delete, text: ' dolor' },
             ];
             expect(actual).toStrictEqual(expected);
         });
 
         test('In multiple parts of the string', () => {
-            const actual = compare.words
-                .of('Lorem ipsum dolor sit amet').with('Lorem dolor amet');
+            const actual = Difference.get({ by: By.word, between: 'Lorem ipsum dolor sit amet', and: 'Lorem dolor amet' });
             const expected = [
-                { status: compare.status.unmodified, value: 'Lorem' },
-                { status: compare.status.removed, value: ' ipsum' },
-                { status: compare.status.unmodified, value: ' dolor ' },
-                { status: compare.status.removed, value: 'sit ' },
-                { status: compare.status.unmodified, value: 'amet' },
+                { type: Type.unmodified, text: 'Lorem' },
+                { type: Type.delete, text: ' ipsum' },
+                { type: Type.unmodified, text: ' dolor ' },
+                { type: Type.delete, text: 'sit ' },
+                { type: Type.unmodified, text: 'amet' },
             ];
             expect(actual).toStrictEqual(expected);
         });
 
         test('Of white space', () => {
-            const actual = compare.words
-                .of('Lorem ipsum  dolor  sit amet ').with('Lorem ipsum dolor sit amet');
+            const actual = Difference.get({ by: By.word, between: 'Lorem ipsum  dolor  sit amet ', and: 'Lorem ipsum dolor sit amet' });
             const expected = [
-                { status: compare.status.unmodified, value: 'Lorem ipsum ' },
-                { status: compare.status.removed, value: ' ' },
-                { status: compare.status.unmodified, value: 'dolor' },
-                { status: compare.status.removed, value: ' ' },
-                { status: compare.status.unmodified, value: ' sit amet' },
-                { status: compare.status.removed, value: ' ' },
+                { type: Type.unmodified, text: 'Lorem ipsum ' },
+                { type: Type.delete, text: ' ' },
+                { type: Type.unmodified, text: 'dolor' },
+                { type: Type.delete, text: ' ' },
+                { type: Type.unmodified, text: ' sit amet' },
+                { type: Type.delete, text: ' ' },
             ];
             expect(actual).toStrictEqual(expected);
         });
+    });
+});
+
+describe('Difference chain syntax', () => {
+    test('With two strings where the last has inserts in multiple parts of the string', () => {
+        const actual = Difference.by(By.word).between('Lorem dolor amet').and('Lorem ipsum dolor sit amet');
+        const expected = [
+            { type: Type.unmodified, text: 'Lorem' },
+            { type: Type.insert, text: ' ipsum' },
+            { type: Type.unmodified, text: ' dolor ' },
+            { type: Type.insert, text: 'sit ' },
+            { type: Type.unmodified, text: 'amet' },
+        ];
+        expect(actual).toStrictEqual(expected);
     });
 });

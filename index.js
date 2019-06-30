@@ -1,230 +1,137 @@
-const unmodified = 'unmodified';
-const added = 'added';
-const removed = 'removed';
-
-const status = {
-    unmodified,
-    added,
-    removed,
-};
-
-const characters = {
-    longestUnmodified: {
-        of: longerValue => ({
-            with: shorterValue => {
-                // See if the shorterValue exists within the longerValue
-                if (longerValue.includes(shorterValue))
-                    return shorterValue;
-                // If it doesn't and it's one character, then there's no unmodified string
-                if (shorterValue.length === 1)
-                    return '';
-            
-                // See if a substring of the shorterValue exists within the longerValue
-                for (let shortenBy = 1; shortenBy < shorterValue.length; shortenBy++) {
-                    // Try substrings with one less character until one exists within the longerValue
-                    for (let startChar = 0; startChar <= shortenBy; startChar++) {
-                        const endChar = shorterValue.length - (shortenBy - startChar);
-                        const evenshorterValue = shorterValue.substring(startChar, endChar);
-            
-                        if (longerValue.includes(evenshorterValue))
-                            return evenshorterValue;
-                    }
-                }
-                
-                return '';
-            },
-        }),
+const Difference = {
+    By: {
+        character: 'character',
+        word: 'word',
     },
-    of: oldValue => ({
-        with: newValue => {
-            if (typeof oldValue !== 'string' || typeof newValue !== 'string')
-                throw new TypeError('Two strings must be provided for comparisons');
+    Type: {
+        unmodified: 'unmodified',
+        insert: 'insert',
+        delete: 'delete',
+    },
+    longestUnmodified: function({ by = Difference.By.word, between, and }) {
+        if (between === undefined || typeof between !== 'string' ||
+            and === undefined || typeof and !== 'string')
+            throw TypeError('Two strings must be provided to return their differences');
 
-            if (!oldValue && !newValue)
-                return [{ status: unmodified, value: '' }];
+        const longerValue = between;
+        let shorterValue = and;
 
-            if (!oldValue)
-                return [{ status: added, value: newValue }];
-            
-            if (!newValue)
-                return [{ status: removed, value: oldValue }];
+        // See if the shorterValue exists within the longerValue
+        if (longerValue.includes(shorterValue))
+            return shorterValue;
 
-            if (newValue === oldValue)
-                return [{ status: unmodified, value: newValue }];
+        // Could include an option to group whitespace, /(\s+)/
+        // Could include an option to ignore whitespace, /\s+/
+        if (by === Difference.By.word)
+            shorterValue = shorterValue.split(/(\s)/);
+
+        // If it's one character or word, then there's no unmodified string
+        if (shorterValue.length === 1)
+            return '';
+    
+        // See if a substring of the shorterValue exists within the longerValue
+        for (let shortenBy = 1; shortenBy < shorterValue.length; shortenBy++) {
+            // Try substrings with one less character or word until one exists within the longerValue
+            for (let startCharOrWord = 0; startCharOrWord <= shortenBy; startCharOrWord++) {
+                const endCharOrWord = shorterValue.length - (shortenBy - startCharOrWord);
+                const evenShorterValue = by === Difference.By.word ? shorterValue.slice(startCharOrWord, endCharOrWord).join('') : shorterValue.substring(startCharOrWord, endCharOrWord);
+
+                if (longerValue.includes(evenShorterValue))
+                    return evenShorterValue;
+            }
+        }
         
-            let compared = [];
-            const oldValueLength = oldValue.length;
-            const newValueLength = newValue.length;
-        
-            // If newValue is longer, something was added
-            if (newValueLength >= oldValueLength) {
-                const unmodifiedValue = characters.longestUnmodified.of(newValue).with(oldValue);
-        
-                if (!unmodifiedValue) {
-                    compared.push({ status: removed, value: oldValue });
-                    compared.push({ status: added, value: newValue });
-                } else {
-                    const unmodifiedValueLength = unmodifiedValue.length;
-                    const oldUnmodifiedValueStart = oldValue.indexOf(unmodifiedValue);
-                    const newUnmodifiedValueStart = newValue.indexOf(unmodifiedValue);
-                    const beforeNewUnmodifiedValue = newValue.substring(0, newUnmodifiedValueStart);
-                    const afterNewUnmodifiedValue = newValue.substring(newUnmodifiedValueStart + unmodifiedValueLength);
-                    const beforeOldUnmodifiedValue = oldValue.substring(0, oldUnmodifiedValueStart);
-                    const afterOldUnmodifiedValue = oldValue.substring(oldUnmodifiedValueStart + unmodifiedValueLength);
+        return '';
+    },
+    get: function({ by = Difference.By.word, between, and }) {
+        if (between === undefined || typeof between !== 'string' ||
+            and === undefined || typeof and !== 'string')
+            throw TypeError('Two strings must be provided to return their differences');
             
-                    if (beforeOldUnmodifiedValue || beforeNewUnmodifiedValue)
-                        compared = compared.concat(characters.of(beforeOldUnmodifiedValue).with(beforeNewUnmodifiedValue));
-            
-                    if (unmodifiedValue)
-                        compared.push({ status: unmodified, value: unmodifiedValue });
-                        
-                    if (afterOldUnmodifiedValue || afterNewUnmodifiedValue)
-                        compared = compared.concat(characters.of(afterOldUnmodifiedValue).with(afterNewUnmodifiedValue));
-                }
-            // If oldValue is longer, something was removed
+        const oldValue = between;
+        const newValue = and;
+
+        if (!oldValue && !newValue)
+            return [{ type: Difference.Type.unmodified, text: '' }];
+
+        if (!oldValue)
+            return [{ type: Difference.Type.insert, text: newValue }];
+        
+        if (!newValue)
+            return [{ type: Difference.Type.delete, text: oldValue }];
+
+        if (newValue === oldValue)
+            return [{ type: Difference.Type.unmodified, text: newValue }];
+    
+        let compared = [];
+        const oldValueLength = oldValue.length;
+        const newValueLength = newValue.length;
+    
+        // If newValue is longer, something was inserted
+        if (newValueLength >= oldValueLength) {
+            const unmodifiedValue = Difference.longestUnmodified({ by, between: newValue, and: oldValue });
+    
+            if (!unmodifiedValue) {
+                compared.push({ type: Difference.Type.insert, text: newValue });
+                compared.push({ type: Difference.Type.delete, text: oldValue });
             } else {
-                const unmodifiedValue = characters.longestUnmodified.of(oldValue).with(newValue);
+                const unmodifiedValueLength = unmodifiedValue.length;
+                const oldUnmodifiedValueStart = oldValue.indexOf(unmodifiedValue);
+                const newUnmodifiedValueStart = newValue.indexOf(unmodifiedValue);
+                const beforeNewUnmodifiedValue = newValue.substring(0, newUnmodifiedValueStart);
+                const afterNewUnmodifiedValue = newValue.substring(newUnmodifiedValueStart + unmodifiedValueLength);
+                const beforeOldUnmodifiedValue = oldValue.substring(0, oldUnmodifiedValueStart);
+                const afterOldUnmodifiedValue = oldValue.substring(oldUnmodifiedValueStart + unmodifiedValueLength);
         
-                if (!unmodifiedValue) {
-                    compared.push({ status: removed, value: oldValue });
-                    compared.push({ status: added, value: newValue });
-                } else {
-                    const unmodifiedValueLength = unmodifiedValue.length;
-                    const newUnmodifiedValueStart = newValue.indexOf(unmodifiedValue);
-                    const oldUnmodifiedValueStart = oldValue.indexOf(unmodifiedValue);
-                    const beforeOldUnmodifiedValue = oldValue.substring(0, oldUnmodifiedValueStart);
-                    const afterOldUnmodifiedValue = oldValue.substring(oldUnmodifiedValueStart + unmodifiedValueLength);
-                    const beforeNewUnmodifiedValue = newValue.substring(0, newUnmodifiedValueStart);
-                    const afterNewUnmodifiedValue = newValue.substring(newUnmodifiedValueStart + unmodifiedValueLength);
+                if (beforeOldUnmodifiedValue || beforeNewUnmodifiedValue)
+                    compared = compared.concat(Difference.get({ by, between: beforeOldUnmodifiedValue, and: beforeNewUnmodifiedValue }));
         
-                    if (beforeOldUnmodifiedValue || beforeNewUnmodifiedValue)
-                        compared = compared.concat(characters.of(beforeOldUnmodifiedValue).with(beforeNewUnmodifiedValue));
-        
-                    if (unmodifiedValue)
-                        compared.push({ status: unmodified, value: unmodifiedValue });
+                if (unmodifiedValue)
+                    compared.push({ type: Difference.Type.unmodified, text: unmodifiedValue });
                     
-                    if (afterOldUnmodifiedValue || afterNewUnmodifiedValue)
-                        compared = compared.concat(characters.of(afterOldUnmodifiedValue).with(afterNewUnmodifiedValue));
-                }
+                if (afterOldUnmodifiedValue || afterNewUnmodifiedValue)
+                    compared = compared.concat(Difference.get({ by, between: afterOldUnmodifiedValue, and: afterNewUnmodifiedValue }));
             }
-        
-            return compared;
-        },
-    }),
-};
-
-const words = {
-    longestUnmodified: {
-        of: longerValue => ({
-            with: shorterValue => {
-                // See if the shorterValue exists within the longerValue
-                if (longerValue.includes(shorterValue))
-                    return shorterValue;
-
-                // Could include an option to group whitespace, /(\s+)/
-                // Could include an option to ignore whitespace, /\s+/
-                const shorterValueList = shorterValue.split(/(\s)/);
-
-                // If it doesn't and it's one word, then there's no unmodified string
-                if (shorterValueList.length === 1)
-                    return '';
+        // If oldValue is longer, something was deleted
+        } else {
+            const unmodifiedValue = Difference.longestUnmodified({ by, between: oldValue, and: newValue });
             
-                // See if a substring of the shorterValue exists within the longerValue
-                for (let shortenBy = 1; shortenBy < shorterValueList.length; shortenBy++) {
-                    // Try substrings with one less word until one exists within the longerValue
-                    for (let startWord = 0; startWord <= shortenBy; startWord++) {
-                        const endWord = shorterValueList.length - (shortenBy - startWord);
-                        const evenshorterValue = shorterValueList.slice(startWord, endWord).join('');
-            
-                        if (longerValue.includes(evenshorterValue))
-                            return evenshorterValue;
-                    }
-                }
-                
-                return '';
-            },
-        }),
-    },
-    of: oldValue => ({
-        with: newValue => {
-            if (typeof oldValue !== 'string' || typeof newValue !== 'string')
-                throw new TypeError('Two strings must be provided for comparisons');
-
-            if (!oldValue && !newValue)
-                return [{ status: unmodified, value: '' }];
-
-            if (!oldValue)
-                return [{ status: added, value: newValue }];
-            
-            if (!newValue)
-                return [{ status: removed, value: oldValue }];
-
-            if (newValue === oldValue)
-                return [{ status: unmodified, value: newValue }];
-            
-            let compared = [];
-            const oldValueLength = oldValue.length;
-            const newValueLength = newValue.length;
-        
-            // If newValue is longer, something was added
-            if (newValueLength >= oldValueLength) {
-                const unmodifiedValue = words.longestUnmodified.of(newValue).with(oldValue);
-        
-                if (!unmodifiedValue) {
-                    compared.push({ status: removed, value: oldValue });
-                    compared.push({ status: added, value: newValue });
-                } else {
-                    const unmodifiedValueLength = unmodifiedValue.length;
-                    const oldUnmodifiedValueStart = oldValue.indexOf(unmodifiedValue);
-                    const newUnmodifiedValueStart = newValue.indexOf(unmodifiedValue);
-                    const beforeNewUnmodifiedValue = newValue.substring(0, newUnmodifiedValueStart);
-                    const afterNewUnmodifiedValue = newValue.substring(newUnmodifiedValueStart + unmodifiedValueLength);
-                    const beforeOldUnmodifiedValue = oldValue.substring(0, oldUnmodifiedValueStart);
-                    const afterOldUnmodifiedValue = oldValue.substring(oldUnmodifiedValueStart + unmodifiedValueLength);
-                        
-                    if (beforeOldUnmodifiedValue || beforeNewUnmodifiedValue)
-                        compared = compared.concat(words.of(beforeOldUnmodifiedValue).with(beforeNewUnmodifiedValue));
-            
-                    if (unmodifiedValue)
-                        compared.push({ status: unmodified, value: unmodifiedValue });
-
-                    if (afterOldUnmodifiedValue || afterNewUnmodifiedValue)
-                        compared = compared.concat(words.of(afterOldUnmodifiedValue).with(afterNewUnmodifiedValue));
-                }
-            // If oldValue is longer, something was removed
+            if (!unmodifiedValue) {
+                compared.push({ type: Difference.Type.insert, text: newValue });
+                compared.push({ type: Difference.Type.delete, text: oldValue });
             } else {
-                const unmodifiedValue = words.longestUnmodified.of(oldValue).with(newValue);
-            
-                if (!unmodifiedValue) {
-                    compared.push({ status: removed, value: oldValue });
-                    compared.push({ status: added, value: newValue });
-                } else {
-                    const unmodifiedValueLength = unmodifiedValue.length;
-                    const newUnmodifiedValueStart = newValue.indexOf(unmodifiedValue);
-                    const oldUnmodifiedValueStart = oldValue.indexOf(unmodifiedValue);
-                    const beforeOldUnmodifiedValue = oldValue.substring(0, oldUnmodifiedValueStart);
-                    const afterOldUnmodifiedValue = oldValue.substring(oldUnmodifiedValueStart + unmodifiedValueLength);
-                    const beforeNewUnmodifiedValue = newValue.substring(0, newUnmodifiedValueStart);
-                    const afterNewUnmodifiedValue = newValue.substring(newUnmodifiedValueStart + unmodifiedValueLength);
-            
-                    if (beforeOldUnmodifiedValue || beforeNewUnmodifiedValue)
-                        compared = compared.concat(words.of(beforeOldUnmodifiedValue).with(beforeNewUnmodifiedValue));
-            
-                    if (unmodifiedValue)
-                        compared.push({ status: unmodified, value: unmodifiedValue });
-                        
-                    if (afterOldUnmodifiedValue || afterNewUnmodifiedValue)
-                        compared = compared.concat(words.of(afterOldUnmodifiedValue).with(afterNewUnmodifiedValue));
-                }
+                const unmodifiedValueLength = unmodifiedValue.length;
+                const newUnmodifiedValueStart = newValue.indexOf(unmodifiedValue);
+                const oldUnmodifiedValueStart = oldValue.indexOf(unmodifiedValue);
+                const beforeOldUnmodifiedValue = oldValue.substring(0, oldUnmodifiedValueStart);
+                const afterOldUnmodifiedValue = oldValue.substring(oldUnmodifiedValueStart + unmodifiedValueLength);
+                const beforeNewUnmodifiedValue = newValue.substring(0, newUnmodifiedValueStart);
+                const afterNewUnmodifiedValue = newValue.substring(newUnmodifiedValueStart + unmodifiedValueLength);
+    
+                if (beforeOldUnmodifiedValue || beforeNewUnmodifiedValue)
+                    compared = compared.concat(Difference.get({ by, between: beforeOldUnmodifiedValue, and: beforeNewUnmodifiedValue }));
+    
+                if (unmodifiedValue)
+                    compared.push({ type: Difference.Type.unmodified, text: unmodifiedValue });
+                
+                if (afterOldUnmodifiedValue || afterNewUnmodifiedValue)
+                    compared = compared.concat(Difference.get({ by, between: afterOldUnmodifiedValue, and: afterNewUnmodifiedValue }));
             }
-
-            return compared;
-        },
-    }),
+        }
+    
+        return compared;
+    },
+    by: function(by) {
+        return {
+            between: function(between) {
+                return {
+                    and: function(and) {
+                        return Difference.get({ by, between, and });
+                    },
+                };
+            },
+        };
+    },
 };
 
-module.exports = {
-    status,
-    characters,
-    words,
-};
+module.exports = Difference;

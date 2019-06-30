@@ -1,7 +1,7 @@
 {
-  "name": "compare",
-  "version": "1.0.0",
-  "description": "Compare values",
+  "name": "difference",
+  "version": "2.0.0",
+  "description": "Get the difference between two strings",
   "main": "index.js",
   "scripts": {
     "test": "jest",
